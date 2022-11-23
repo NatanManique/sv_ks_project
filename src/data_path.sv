@@ -22,9 +22,85 @@ import k_and_s_pkg::*;
 
 );
 
-// added to remove warning from testbench
-// remove it
-assign ram_addr = 'd0;
-// remove 
+    logic [4:0]  mem_addr;
+    logic [4:0]  program_counter;
+    logic [15:0] bus_a;
+    logic [15:0] bus_b;
+    logic [15:0] bus_c;
+    logic [15:0] instruction;
+    logic [1:0]  a_addr;
+    logic [1:0]  b_addr;
+    logic [1:0]  c_addr;
+    logic [15:0] alu_out;
+    logic  zero_f;
+    logic  neg_f;
+    logic  ov_f;
+    logic  sov_f;
+    logic  carry_in_ultimo_bit;
+
+always_ff @(posedge clck ) begin : ir_control
+    if(ir_enable)
+        instruction <= data_in;
+    
+end ir_control
+
+
+always_ff @(posedge clck ) begin : pc_control
+    if(pc_enable)
+
+        if(branch)
+        program_counter <= mem_addr
+        else
+        program_counter <= program_counter + 1;
+
+    instruction <= data_in;
+    
+end pc_control
+
+
+always_comb begin : ula_control
+    case (operation)
+        2'b00: begin // soma
+            {carry_in_ultimo_bit, alu_out[14:0]} = bus_a[14:0] + bus_b[14:0];
+            {ov_f, alu_out[15]}                  = bus_a[15] + bus_b[15] + carry_in_ultimo_bit;
+            sov_f                                = ov_f ^ carry_in_ultimo_bit;
+        end
+
+        2'b01: begin // end
+            alu_out              = bus_a & bus_b;
+            ov_f                 = 1'b0;
+            sov_f                = 1'b0;
+            carry_in_ultimo_bit  = 1'b0;
+
+        end
+
+        2'b10: begin //or
+            alu_out              = bus_a | bus_b;
+            ov_f                 = 1'b0;
+            sov_f                = 1'b0;
+            carry_in_ultimo_bit  = 1'b0;
+        end
+        
+        default: begin //sub
+            
+        end
+       
+    endcase
+
+
+
+end ula_control
+
+assign zero_f= ~|(alu_out);  // reduçao NOR.
+assign neg_f= alu_out[15];   // bit sinal.
+
+
+
+
+
+
+
+
+
 
 endmodule : data_path
