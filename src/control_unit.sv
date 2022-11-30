@@ -55,7 +55,7 @@ always_comb begin : prox_estado
     write_reg_enable    = 1'd0;
     addr_sel            = 1'd0;
     c_sel               = 1'd0;
-    operation           = 2'd00;
+    operation           = 2'd0;
     flags_reg_enable    = 1'd0;
     ram_write_enable    = 1'd0;
     halt                = 1'd0;
@@ -133,7 +133,7 @@ always_comb begin : prox_estado
                         next_state = BUSCA_INSTR;
                 end         
                 I_BNOV: begin
-                     if( signed_overflow) begin
+                     if(signed_overflow) begin
                             next_state = BRANCH_;
                         end
                         next_state = BUSCA_INSTR;

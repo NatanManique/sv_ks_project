@@ -28,6 +28,11 @@ import k_and_s_pkg::*;
     logic [15:0] bus_b;
     logic [15:0] bus_c;
     logic [15:0] instruction;
+    logic [15:0] neg_b;
+    logic [15:0] R0;
+    logic [15:0] R1;
+    logic [15:0] R2;
+    logic [15:0] R3;
     logic [1:0]  a_addr;
     logic [1:0]  b_addr;
     logic [1:0]  c_addr;
@@ -69,17 +74,17 @@ end : banco_flags
 
 
 always_comb begin : ula_control
-   assign  neg_b = (~bus_b) + 1;
+   assign  neg_b = ~(bus_b) + 1;
     case(operation)
         2'b01: begin // add
-            {carry_in_ultimo_bit, alu_out[14:0]} = bus_a[14:0] + bus_b[14:0];
-            {ov_f, alu_out[15]}                  = bus_a[15] + bus_b[15] + carry_in_ultimo_bit;
-            sov_f                                = ov_f ^carry_in_ultimo_bit;
+            {carry_in_ultimo_bit,alu_out[14:0]} = bus_a[14:0] + bus_b[14:0];
+            {ov_f, alu_out[15]}               = bus_a[15] + bus_b[15] + carry_in_ultimo_bit;
+            sov_f                             = ov_f ^ carry_in_ultimo_bit;
         end
         2'b10: begin // sub
-            {carry_in_ultimo_bit, alu_out[14:0]} = bus_b[14:0] + bus_a[14:0];
-            {ov_f, alu_out[15]}                  = bus_b[15]+ bus_a[15] + carry_in_ultimo_bit;
-            sov_f                                = ov_f ^carry_in_ultimo_bit;        
+            {carry_in_ultimo_bit,alu_out[14:0]} = bus_a[14:0] + neg_b[14:0];
+            {ov_f, alu_out[15]}               = bus_a[15] + neg_b[15] + carry_in_ultimo_bit;
+            sov_f                             = ov_f ^ carry_in_ultimo_bit;
         end
         2'b11: begin // and
             alu_out             = bus_a & bus_b;
@@ -193,13 +198,41 @@ always_comb begin: mux_add
      ram_addr = program_counter;
 end : mux_add
 
-always_ff @(posedge clk or negedge rst_n) begin : banco_reg
-    if(write_reg_enable) begin
-      reg_[c_addr] <= bus_c;
-    end
-end : banco_reg
-assign bus_a = reg_[a_addr];
-assign bus_b = reg_[b_addr];
+always_ff @(posedge clk) begin : register_bank 
+   if(write_reg_enable) begin
+       case(c_addr)
+         2'b00:
+            R0 = bus_c;  
+         2'b01:
+            R1 = bus_c;  
+         2'b10:
+            R2 = bus_c;
+         2'b11:
+            R3 = bus_c;
+    endcase
+  end
+    case(a_addr)
+        2'b00:
+            bus_a = R0;  
+         2'b01:
+            bus_a = R1;  
+         2'b10:
+            bus_a = R2;
+         2'b11:
+            bus_a = R3;
+        endcase      
+    case(b_addr)
+         2'b00:
+            bus_b = R0;  
+         2'b01:
+            bus_b = R1;  
+         2'b10:
+            bus_b = R2;
+         2'b11:
+            bus_b = R3;  
+     endcase 
+end
+
 
 always_comb begin : data_out_bus
     assign data_out = bus_a;
