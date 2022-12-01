@@ -27,10 +27,10 @@ typedef enum
 ,   BUSCA_INSTR
 ,   REG_ESCREVE
 ,   REG_INSTR
-,   LOAD1
-,   STORE2
+,   LOAD
+,   STORE
 ,   FIM_PROGRAMA
-,   BRANCH_
+,   BRANCH
 
 } STATE_T;
 
@@ -63,12 +63,11 @@ always_comb begin : prox_estado
     case (state)
         BUSCA_INSTR: begin    
             next_state = REG_INSTR;
-           
         end
         REG_INSTR : begin
             next_state = DECODIFICA;
-             ir_enable = 1'b1;
-             pc_enable = 1'b1;
+            ir_enable = 1'b1;
+            pc_enable = 1'b1;
         end
         DECODIFICA: begin    
             next_state = BUSCA_INSTR;
@@ -77,18 +76,22 @@ always_comb begin : prox_estado
                     next_state = FIM_PROGRAMA;        
                 end
                 I_LOAD: begin
-                    next_state = LOAD1;
                     addr_sel   = 1'b1;
+                    next_state = LOAD;
                 end
                 I_STORE: begin
-                    next_state = STORE2;
                     addr_sel   = 1'b1;
+                    next_state = STORE;
                 end
                 I_MOVE: begin
-                    next_state = REG_ESCREVE;                  
+                    operation = 2'b10;               
+                    next_state = REG_ESCREVE;   
                 end 
-                I_ADD: begin
-                    next_state = REG_ESCREVE;               
+                I_BRANCH:begin
+                    next_state = BRANCH;
+                end         
+                I_ADD: begin  
+                    next_state = REG_ESCREVE;   
                 end        
                 I_SUB: begin
                     next_state = REG_ESCREVE;
@@ -99,54 +102,51 @@ always_comb begin : prox_estado
                 I_OR:  begin
                     next_state = REG_ESCREVE;                   
                 end    
-                I_BRANCH:begin
-                    next_state = BRANCH_;
-                end         
                 I_BZERO: begin
                     if (zero_op) begin
-                       next_state = BRANCH_;
+                       next_state = BRANCH;
                     end
                     next_state = BUSCA_INSTR;
                 end
                 I_BNZERO: begin
                     if (!zero_op) begin
-                        next_state = BRANCH_;
+                        next_state = BRANCH;
                     end
                     next_state = BUSCA_INSTR;
                 end      
                 I_BNEG: begin
                     if (neg_op) begin
-                        next_state = BRANCH_;
+                        next_state = BRANCH;
                     end
                     next_state = BUSCA_INSTR;
                 end        
                 I_BNNEG: begin
                     if (!neg_op) begin
-                        next_state = BRANCH_;
+                        next_state = BRANCH;
                     end
                     next_state = BUSCA_INSTR;
                 end       
                 I_BOV: begin
                     if(unsigned_overflow) begin
-                            next_state = BRANCH_;
+                            next_state = BRANCH;
                         end
                         next_state = BUSCA_INSTR;
                 end         
                 I_BNOV: begin
-                     if(signed_overflow) begin
-                            next_state = BRANCH_;
+                     if(!unsigned_overflow) begin
+                            next_state = BRANCH;
                         end
                         next_state = BUSCA_INSTR;
                 end
             endcase
         end
-         LOAD1 : begin
+        LOAD : begin
             next_state       = BUSCA_INSTR;
             write_reg_enable = 1'b1;
             ir_enable        = 1'b0;
             c_sel            = 1'b0;
         end
-        STORE2 : begin 
+        STORE : begin 
             next_state       = BUSCA_INSTR;
             ram_write_enable = 1'b1;
             ir_enable        = 1'b0;
@@ -161,14 +161,14 @@ always_comb begin : prox_estado
             case(decoded_instruction)
                 I_SUB:   operation  = 2'b10;
                 I_ADD:   operation  = 2'b01;
-                I_AND:   operation  = 2'b11;  
-                default: operation = 2'b00;
+                I_AND:   operation  = 2'b11;
+                default: operation  = 2'b00;
             endcase
         end
-        BRANCH_: begin
-             next_state = BUSCA_INSTR;
+        BRANCH: begin
              branch     = 1'b1;
              pc_enable  = 1'b1;
+             next_state = BUSCA_INSTR;
         end
         FIM_PROGRAMA : begin
             next_state  = FIM_PROGRAMA;

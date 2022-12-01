@@ -24,24 +24,26 @@ import k_and_s_pkg::*;
 
     logic [4:0]  mem_addr;
     logic [4:0]  program_counter;
+    logic [15:0] instruction;
     logic [15:0] bus_a;
     logic [15:0] bus_b;
     logic [15:0] bus_c;
-    logic [15:0] instruction;
-    logic [15:0] neg_b;
-    logic [15:0] R0;
-    logic [15:0] R1;
-    logic [15:0] R2;
-    logic [15:0] R3;
+    logic [15:0] R0 = 'd0;
+    logic [15:0] R1 = 'd0;
+    logic [15:0] R2 = 'd0;
+    logic [15:0] R3 = 'd0;
     logic [1:0]  a_addr;
     logic [1:0]  b_addr;
     logic [1:0]  c_addr;
     logic [15:0] alu_out;
+    logic [15:0] comple_b;
+    logic  carry_in_ultimo_bit;
     logic  zero_f;
     logic  neg_f;
     logic  ov_f;
     logic  sov_f;
-    logic  carry_in_ultimo_bit;
+    
+    
 
 always_ff @(posedge clk ) begin : ir_control
     if(ir_enable) begin
@@ -74,17 +76,17 @@ end : banco_flags
 
 
 always_comb begin : ula_control
-   assign  neg_b = ~(bus_b) + 1;
+   assign  comple_b = ~(bus_b) + 1;
     case(operation)
         2'b01: begin // add
             {carry_in_ultimo_bit,alu_out[14:0]} = bus_a[14:0] + bus_b[14:0];
-            {ov_f, alu_out[15]}               = bus_a[15] + bus_b[15] + carry_in_ultimo_bit;
-            sov_f                             = ov_f ^ carry_in_ultimo_bit;
+            {ov_f, alu_out[15]}                 = bus_a[15] + bus_b[15] + carry_in_ultimo_bit;
+            sov_f                               = ov_f ^ carry_in_ultimo_bit;
         end
         2'b10: begin // sub
-            {carry_in_ultimo_bit,alu_out[14:0]} = bus_a[14:0] + neg_b[14:0];
-            {ov_f, alu_out[15]}               = bus_a[15] + neg_b[15] + carry_in_ultimo_bit;
-            sov_f                             = ov_f ^ carry_in_ultimo_bit;
+            {carry_in_ultimo_bit, alu_out[14:0]} = bus_a[14:0] + comple_b[14:0];
+            {ov_f, alu_out[15]}                  = bus_a[15] + comple_b[15] + carry_in_ultimo_bit;
+            sov_f                                = ov_f ^ carry_in_ultimo_bit;
         end
         2'b11: begin // and
             alu_out             = bus_a & bus_b;
@@ -130,25 +132,25 @@ always_comb begin : decoder
             decoded_instruction = I_ADD;
             a_addr = instruction[1:0];
             b_addr = instruction[3:2];
-            c_addr = instruction[3:2];
+            c_addr = instruction[5:4];
         end
         8'b1010_0010 : begin //SUB
             decoded_instruction = I_SUB;
             a_addr = instruction[1:0];
             b_addr = instruction[3:2];
-            c_addr = instruction[3:2];
+            c_addr = instruction[5:4];
         end
         8'b1010_0011 : begin //AND
             decoded_instruction = I_AND;
             a_addr = instruction[1:0];
             b_addr = instruction[3:2];
-            c_addr = instruction[3:2];
+            c_addr = instruction[5:4];
         end
         8'b1010_0100 : begin //OR
             decoded_instruction = I_OR;
             a_addr = instruction[1:0];
             b_addr = instruction[3:2];
-            c_addr = instruction[3:2];
+            c_addr = instruction[5:4];
         end
         8'b0000_0001 : begin //BRANCH
             decoded_instruction = I_BRANCH;
@@ -199,28 +201,28 @@ always_comb begin: mux_add
 end : mux_add
 
 always_ff @(posedge clk) begin : register_bank 
-   if(write_reg_enable) begin
-       case(c_addr)
-         2'b00:
-            R0 = bus_c;  
-         2'b01:
-            R1 = bus_c;  
-         2'b10:
-            R2 = bus_c;
-         2'b11:
-            R3 = bus_c;
-    endcase
-  end
+    if(write_reg_enable) begin
+        case(c_addr)
+            2'b00:
+                R0 = bus_c;  
+            2'b01:
+                R1 = bus_c;  
+            2'b10:
+                R2 = bus_c;
+            2'b11:
+                R3 = bus_c;
+        endcase
+    end
     case(a_addr)
         2'b00:
             bus_a = R0;  
-         2'b01:
+        2'b01:
             bus_a = R1;  
-         2'b10:
+        2'b10:
             bus_a = R2;
-         2'b11:
+        2'b11:
             bus_a = R3;
-        endcase      
+    endcase      
     case(b_addr)
          2'b00:
             bus_b = R0;  
@@ -230,7 +232,7 @@ always_ff @(posedge clk) begin : register_bank
             bus_b = R2;
          2'b11:
             bus_b = R3;  
-     endcase 
+    endcase 
 end
 
 
